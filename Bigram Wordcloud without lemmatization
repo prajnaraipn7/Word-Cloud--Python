@@ -1,0 +1,78 @@
+#importing Libraries
+import matplotlib.pyplot as plt
+import pandas as pd
+import string
+from matplotlib import rcParams
+#from nltk import WordNetLemmatizer
+from wordcloud import WordCloud, STOPWORDS
+from nltk.corpus import stopwords
+from nltk import pos_tag, sent_tokenize, word_tokenize, BigramAssocMeasures,BigramCollocationFinder
+stop = set(stopwords.words('english'))
+
+#Read a file
+import pandas as pd
+import numpy as np 
+
+data = pd.read_csv("data.csv",encoding='Latin-1')
+data3=data[data['col1'] == "xname"]
+data3['col2'] = data3['col1'].factorize()[0]
+
+col=['col1','col2','col3']
+data3 = data3[col]
+
+data3.drop_duplicates(inplace = True)
+
+stop = set(stopwords.words('english'))
+translate_table = dict((ord(char), " ") for char in string.punctuation)
+#print(translate_table)
+
+def process_text(text,translate_table, stopwords):
+    processed_text = ""
+    for sentence in sent_tokenize(text):
+        tagged_sentence = pos_tag(word_tokenize(sentence.translate(translate_table)))
+        for word, tag in tagged_sentence:
+            word = word.lower()
+            #if word not in stopwords:
+                #if tag[0] != 'V':
+            processed_text += word + " "
+    return processed_text
+    
+def get_bigrams(full_text, threshold=30):
+    if isinstance(full_text, str):
+        text = full_text
+    else:
+        text = " ".join(full_text)
+    bigram_measures = BigramAssocMeasures()
+    #trigram_measures = TrigramAssocMeasures()
+    finder = BigramCollocationFinder.from_words(text.split())
+    finder.apply_freq_filter(2)
+    bigrams = {" ".join(words): "_".join(words)
+               for words in finder.above_score(bigram_measures.likelihood_ratio, threshold)}
+    #finder = TrigramCollocationFinder.from_words(text.split())
+    #finder.apply_freq_filter(2)
+    #trigrams = {" ".join(words): "_".join(words)
+                #for words in finder.above_score(trigram_measures.likelihood_ratio, threshold)}
+    return bigrams
+    
+ def use_ngrams_only(texts,translate_table, stopwords):
+    processed_texts = []
+    for index, doc in enumerate(texts):
+        processed_texts.append(process_text(doc,translate_table, stop))
+    bigrams = get_bigrams(processed_texts)
+    indexed_texts = []
+    for doc in processed_texts:
+        current_doc = []
+        #for k, v in trigrams.items():
+            #c = doc.count(k)
+            #if c > 0:
+                #current_doc += [v] * c
+                #doc = doc.replace(k, v)
+        for k, v in bigrams.items():
+            current_doc += [v] * doc.count(" " + k + " ")
+        indexed_texts.append(" ".join(current_doc))
+    return " ".join(indexed_texts)
+
+wordcloud = WordCloud(stopwords=STOPWORDS, background_color="white").generate(use_ngrams_only(data3['col3'], translate_table, stop))
+plt.figure(figsize=(8, 5))
+plt.axis("off")
+plt.show()
